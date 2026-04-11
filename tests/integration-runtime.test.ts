@@ -5,6 +5,9 @@ import { reduxRuntimeController } from "../src/redux/runtime";
 import { startReduxRuntimeServers } from "../src/integration/runtime";
 import type { RequestMessage, ReduxRuntimeHandle, StateChangedMessage } from "../src/integration/types";
 
+const hasBunRuntime: boolean = "Bun" in globalThis;
+const describeIfBun = hasBunRuntime ? describe : describe.skip;
+
 const waitForWebSocketOpen = (socket: WebSocket): Promise<void> =>
   new Promise((resolve: () => void, reject: (reason?: unknown) => void) => {
     socket.onopen = (): void => resolve();
@@ -36,7 +39,7 @@ const waitForMatchingMessage = async <TMessage>(
   }
 };
 
-describe("startReduxRuntimeServers", () => {
+describeIfBun("startReduxRuntimeServers", () => {
   let handle: ReduxRuntimeHandle | null = null;
 
   afterEach(() => {

@@ -6,6 +6,9 @@ import { startReduxRuntimeServers, stopReduxRuntimeServers } from "../src/integr
 import { RegisteredStoresController } from "../src/integration/stores-controller";
 import { reduxRuntimeController } from "../src/redux/runtime";
 
+const hasBunRuntime: boolean = "Bun" in globalThis;
+const describeIfBun = hasBunRuntime ? describe : describe.skip;
+
 interface CounterState {
   value: number;
 }
@@ -36,7 +39,7 @@ const createCounterStore = () => {
   };
 };
 
-describe("registerStoresForMCP and registered store runtime", () => {
+describeIfBun("registerStoresForMCP and registered store runtime", () => {
   afterEach(() => {
     stopReduxRuntimeServers();
     resetRuntimeController();

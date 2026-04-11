@@ -1,15 +1,43 @@
 {
   "name": "redux-mcp",
+  "version": "0.1.0",
+  "description": "Redux to MCP bridge with websocket runtime integration.",
   "module": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./mcp": "./src/mcp/index.ts"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE.md"
+  ],
   "type": "module",
-  "private": true,
+  "private": false,
+  "license": "MIT",
+  "keywords": [
+    "redux",
+    "mcp",
+    "websocket",
+    "bun"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/n1snt/redux-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/n1snt/redux-mcp/issues"
+  },
+  "homepage": "https://github.com/n1snt/redux-mcp#readme",
   "scripts": {
     "dev:mcp": "bun run src/mcp/index.ts",
     "dev:playground": "bun x vite --config playground/vite.config.ts",
     "build:playground": "bun x vite build --config playground/vite.config.ts",
     "typecheck": "bun x tsc --noEmit && bun x tsc -p playground/tsconfig.json --noEmit",
     "test": "bun x vitest run --coverage",
-    "test:watch": "bun x vitest"
+    "test:publish": "bun x vitest run",
+    "test:watch": "bun x vitest",
+    "prepublishOnly": "bun run typecheck && bun run test:publish"
   },
   "devDependencies": {
     "@types/bun": "latest",
