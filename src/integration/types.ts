@@ -2,8 +2,8 @@ import type {
   ActionDefinition,
   ActionHistoryEntry,
   DispatchRequest,
-  RootState,
 } from "../redux/types";
+import type { RuntimeController } from "../redux/runtime-controller.types";
 
 export interface RuntimeStartOptions {
   websocketPort?: number;
@@ -16,9 +16,32 @@ export interface ReduxRuntimeHandle {
   stop: () => void;
 }
 
+export interface StoreLike {
+  getState: () => unknown;
+  dispatch: (action: unknown) => unknown;
+}
+
+export interface StoreActionCreators {
+  [actionName: string]: (payload?: unknown) => unknown;
+}
+
+export interface StoreRegistration {
+  storeName: string;
+  store: StoreLike;
+  actions?: StoreActionCreators;
+  reset?: () => void;
+}
+
+export interface RegisterStoresForMCPOptions {
+  stores: StoreRegistration[];
+  runtime?: RuntimeStartOptions;
+}
+
+export interface StoreRuntimeController extends RuntimeController {}
+
 export interface StateChangedMessage {
   type: "state_changed";
-  state: RootState;
+  state: unknown;
   dispatchedActions: ActionHistoryEntry[];
 }
 
@@ -40,7 +63,7 @@ export interface ResponseMessage {
   type: "response";
   requestId: string;
   data:
-    | { state: RootState }
+    | { state: unknown }
     | { availableActions: ActionDefinition[]; dispatchedActions: ActionHistoryEntry[] };
 }
 

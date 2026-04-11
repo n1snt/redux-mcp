@@ -12,8 +12,9 @@ describe("MCP handlers", () => {
   it("returns current state payload", () => {
     const controller: ReduxController = new ReduxController();
     const response = handleGetState(controller);
+    const state = response.structuredContent.state as { counter: { value: number } };
 
-    expect(response.structuredContent.state.counter.value).toBe(0);
+    expect(state.counter.value).toBe(0);
     expect(response.content[0]?.text).toContain("Redux state");
   });
 
@@ -43,8 +44,9 @@ describe("MCP handlers", () => {
       type: "counter/set",
       payload: { value: 42 },
     });
+    const state = response.structuredContent.state as { counter: { value: number } };
 
-    expect(response.structuredContent.state.counter.value).toBe(42);
+    expect(state.counter.value).toBe(42);
     expect(response.structuredContent.dispatchedAction.type).toBe("counter/set");
   });
 
@@ -53,6 +55,7 @@ describe("MCP handlers", () => {
     controller.dispatchAction({ type: "counter/increment", payload: { amount: 7 } });
 
     const response = handleResetState(controller);
-    expect(response.structuredContent.state.counter.value).toBe(0);
+    const state = response.structuredContent.state as { counter: { value: number } };
+    expect(state.counter.value).toBe(0);
   });
 });

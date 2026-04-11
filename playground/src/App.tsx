@@ -5,7 +5,7 @@ import type {
   RequestMessage,
   ResponseMessage,
 } from "../../src/integration/types";
-import type { ActionDefinition, ActionHistoryEntry, AppActionType, DispatchRequest } from "../../src/redux/types";
+import type { ActionDefinition, ActionHistoryEntry, DispatchRequest } from "../../src/redux/types";
 import type { DispatchFormState, PlaygroundViewState } from "./playground.types";
 
 const realtimeUrl: string = "ws://localhost:8788/redux-events";
@@ -211,10 +211,9 @@ const App = (): ReactElement => {
   }, []);
 
   const updateActionType = (event: ChangeEvent<HTMLSelectElement>): void => {
-    const actionType: AppActionType = event.target.value as AppActionType;
     setDispatchForm((previousValue: DispatchFormState) => ({
       ...previousValue,
-      actionType,
+      actionType: event.target.value,
     }));
   };
 

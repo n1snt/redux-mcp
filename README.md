@@ -37,6 +37,13 @@ Importing this package auto-starts the runtime websocket server inside your Bun 
 
 - `import "redux-mcp";`
 - Optional manual control: `startReduxRuntimeServers(...)` from `redux-mcp`
+- Register your app stores and auto-boot runtime in one call: `registerStoresForMCP(...)` from `redux-mcp`
+
+Example registration shape:
+
+- `registerStoresForMCP({ stores: [{ storeName, store, actions?, reset? }], runtime? })`
+- If you provide `actions`, exposed action types become `<storeName>/<actionName>`.
+- If you provide multiple stores, state responses include all stores keyed by `storeName`.
 
 ## MCP Setup in Cursor
 

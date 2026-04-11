@@ -1,4 +1,4 @@
-import type { ActionDefinition, ActionHistoryEntry, DispatchRequest, RootState } from "../redux/types";
+import type { ActionDefinition, ActionHistoryEntry, DispatchRequest } from "../redux/types";
 
 export interface GetActionsRequest extends Record<string, unknown> {
   includeHistory?: boolean;
@@ -10,16 +10,16 @@ export interface GetActionsResponse extends Record<string, unknown> {
 }
 
 export interface GetStateResponse extends Record<string, unknown> {
-  state: RootState;
+  state: unknown;
 }
 
 export interface DispatchActionResponse extends Record<string, unknown> {
-  state: RootState;
+  state: unknown;
   dispatchedAction: DispatchRequest;
 }
 
 export interface ResetStateResponse extends Record<string, unknown> {
-  state: RootState;
+  state: unknown;
 }
 
 export interface McpTextContent {

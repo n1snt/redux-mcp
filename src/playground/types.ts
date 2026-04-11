@@ -1,8 +1,6 @@
-import type { AppActionType } from "../redux/types";
-
 export interface ParsedCommand {
   name: "help" | "state" | "actions" | "dispatch" | "reset" | "exit" | "invalid";
-  actionType?: AppActionType;
+  actionType?: string;
   payload?: unknown;
   reason?: string;
 }

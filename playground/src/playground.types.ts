@@ -1,12 +1,12 @@
-import type { ActionDefinition, ActionHistoryEntry, AppActionType, RootState } from "../../src/redux/types";
+import type { ActionDefinition, ActionHistoryEntry } from "../../src/redux/types";
 
 export interface DispatchFormState {
-  actionType: AppActionType;
+  actionType: string;
   payloadJson: string;
 }
 
 export interface PlaygroundViewState {
-  reduxState: RootState;
+  reduxState: unknown;
   availableActions: ActionDefinition[];
   dispatchedActions: ActionHistoryEntry[];
   feedback: string;

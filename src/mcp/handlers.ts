@@ -1,4 +1,4 @@
-import type { ReduxController } from "../redux/controller";
+import type { RuntimeController } from "../redux/runtime-controller.types";
 import type { DispatchRequest } from "../redux/types";
 import type {
   DispatchActionResponse,
@@ -19,14 +19,14 @@ const toTextResponse = <TPayload>(title: string, payload: TPayload): McpToolResp
   structuredContent: payload,
 });
 
-export const handleGetState = (controller: ReduxController): McpToolResponse<GetStateResponse> => {
+export const handleGetState = (controller: RuntimeController): McpToolResponse<GetStateResponse> => {
   return toTextResponse("Redux state", {
     state: controller.getState(),
   });
 };
 
 export const handleGetActions = (
-  controller: ReduxController,
+  controller: RuntimeController,
   request: GetActionsRequest,
 ): McpToolResponse<GetActionsResponse> => {
   const includeHistory: boolean = request.includeHistory ?? true;
@@ -37,7 +37,7 @@ export const handleGetActions = (
 };
 
 export const handleDispatchAction = (
-  controller: ReduxController,
+  controller: RuntimeController,
   request: DispatchRequest,
 ): McpToolResponse<DispatchActionResponse> => {
   const state = controller.dispatchAction(request);
@@ -47,7 +47,7 @@ export const handleDispatchAction = (
   });
 };
 
-export const handleResetState = (controller: ReduxController): McpToolResponse<ResetStateResponse> => {
+export const handleResetState = (controller: RuntimeController): McpToolResponse<ResetStateResponse> => {
   return toTextResponse("Redux state reset", {
     state: controller.resetState(),
   });

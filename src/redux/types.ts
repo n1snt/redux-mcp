@@ -46,17 +46,18 @@ export interface ToggleTodoPayload {
 }
 
 export interface ActionDefinition {
-  type: AppActionType;
+  type: string;
   description: string;
   payloadSchema: string;
 }
 
 export interface ActionHistoryEntry {
-  type: AppActionType;
+  type: string;
   payload: unknown;
 }
 
 export interface DispatchRequest {
-  type: AppActionType;
+  type: string;
   payload?: unknown;
+  storeName?: string;
 }

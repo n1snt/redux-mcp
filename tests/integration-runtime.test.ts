@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { resetRuntimeController } from "../src/integration/registry";
 import { reduxRuntimeController } from "../src/redux/runtime";
 import { startReduxRuntimeServers } from "../src/integration/runtime";
 import type { RequestMessage, ReduxRuntimeHandle, StateChangedMessage } from "../src/integration/types";
@@ -43,6 +44,7 @@ describe("startReduxRuntimeServers", () => {
       handle.stop();
       handle = null;
     }
+    resetRuntimeController();
     reduxRuntimeController.resetState();
   });
 
@@ -51,9 +53,7 @@ describe("startReduxRuntimeServers", () => {
       websocketPort: 9892,
     });
 
-    const secondHandle = startReduxRuntimeServers({
-      websocketPort: 9992,
-    });
+    const secondHandle = startReduxRuntimeServers();
     expect(secondHandle).toBe(handle);
 
     const notFoundResponse = await fetch("http://localhost:9892/wrong-path");
@@ -226,7 +226,8 @@ describe("startReduxRuntimeServers", () => {
       payload: { value: 123 },
     });
     const updateMessage = (await waitForWebSocketMessage(socket)) as StateChangedMessage;
-    expect(updateMessage.state.counter.value).toBe(123);
+    const updateState = updateMessage.state as { counter: { value: number } };
+    expect(updateState.counter.value).toBe(123);
     socket.close();
     await waitForWebSocketClose(socket);
   });

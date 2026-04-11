@@ -12,7 +12,6 @@ import type {
   ActionDefinition,
   ActionHistoryEntry,
   AddTodoPayload,
-  AppActionType,
   DecrementPayload,
   DispatchRequest,
   IncrementPayload,
@@ -65,7 +64,7 @@ const actionDefinitions: ActionDefinition[] = [
 const assertValidPayload = <TPayload>(
   schema: ZodType<TPayload>,
   payload: unknown,
-  actionType: AppActionType,
+  actionType: string,
 ): TPayload => {
   try {
     return schema.parse(payload);

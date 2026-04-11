@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod";
 
-import { ReduxController } from "../redux/controller";
+import type { RuntimeController } from "../redux/runtime-controller.types";
 import {
   handleDispatchAction,
   handleGetActions,
@@ -9,7 +9,7 @@ import {
   handleResetState,
 } from "./handlers";
 
-export const createMcpServer = (controller: ReduxController): McpServer => {
+export const createMcpServer = (controller: RuntimeController): McpServer => {
   const server: McpServer = new McpServer({
     name: "redux-mcp",
     version: "0.1.0",
@@ -42,8 +42,9 @@ export const createMcpServer = (controller: ReduxController): McpServer => {
       title: "Dispatch Redux Action",
       description: "Dispatch an action to the Redux store.",
       inputSchema: z.object({
-        type: z.enum(["counter/increment", "counter/decrement", "counter/set", "todos/add", "todos/toggle"]),
+        type: z.string(),
         payload: z.unknown().optional(),
+        storeName: z.string().optional(),
       }),
     },
     async (input) => handleDispatchAction(controller, input),

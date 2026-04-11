@@ -1,5 +1,3 @@
-import { reduxRuntimeController } from "../redux/runtime";
-import type { RootState } from "../redux/types";
 import type {
   ErrorMessage,
   PlaygroundServerMessage,
@@ -9,6 +7,8 @@ import type {
   RuntimeStartOptions,
   StateChangedMessage,
 } from "./types";
+import { getRuntimeController } from "./registry";
+import type { RuntimeController } from "../redux/runtime-controller.types";
 
 const defaultWebsocketPort: number = 8788;
 const defaultWebsocketPathname: string = "/redux-events";
@@ -18,7 +18,7 @@ const defaultRuntimeStartOptions: Required<RuntimeStartOptions> = {
 };
 
 let runtimeHandle: ReduxRuntimeHandle | null = null;
-let didWrapController: boolean = false;
+let wrappedController: RuntimeController | null = null;
 let websocketClients: Set<Bun.ServerWebSocket<unknown>> | null = null;
 
 const broadcastState = (): void => {
@@ -28,8 +28,8 @@ const broadcastState = (): void => {
 
   const payload: StateChangedMessage = {
     type: "state_changed",
-    state: reduxRuntimeController.getState(),
-    dispatchedActions: reduxRuntimeController.getDispatchedActions(),
+    state: getRuntimeController().getState(),
+    dispatchedActions: getRuntimeController().getDispatchedActions(),
   };
 
   const serializedPayload: string = JSON.stringify(payload);
@@ -39,26 +39,27 @@ const broadcastState = (): void => {
 };
 
 const wrapControllerForRealtimeBroadcast = (): void => {
-  if (didWrapController) {
+  const runtimeController = getRuntimeController();
+  if (wrappedController === runtimeController) {
     return;
   }
 
-  const originalDispatch = reduxRuntimeController.dispatchAction.bind(reduxRuntimeController);
-  const originalReset = reduxRuntimeController.resetState.bind(reduxRuntimeController);
+  const originalDispatch = runtimeController.dispatchAction.bind(runtimeController);
+  const originalReset = runtimeController.resetState.bind(runtimeController);
 
-  reduxRuntimeController.dispatchAction = (request): RootState => {
-    const updatedState: RootState = originalDispatch(request);
+  runtimeController.dispatchAction = (request): unknown => {
+    const updatedState: unknown = originalDispatch(request);
     broadcastState();
     return updatedState;
   };
 
-  reduxRuntimeController.resetState = (): RootState => {
-    const updatedState: RootState = originalReset();
+  runtimeController.resetState = (): unknown => {
+    const updatedState: unknown = originalReset();
     broadcastState();
     return updatedState;
   };
 
-  didWrapController = true;
+  wrappedController = runtimeController;
 };
 
 const toErrorPayload = (error: unknown, requestId?: string): ErrorMessage => ({
@@ -81,13 +82,14 @@ const isRequestMessage = (value: unknown): value is RequestMessage => {
 };
 
 const handleRequestMessage = (request: RequestMessage): ResponseMessage => {
+  const runtimeController = getRuntimeController();
   switch (request.action) {
     case "get_state":
       return {
         type: "response",
         requestId: request.requestId,
         data: {
-          state: reduxRuntimeController.getState(),
+          state: runtimeController.getState(),
         },
       };
     case "get_actions":
@@ -95,9 +97,8 @@ const handleRequestMessage = (request: RequestMessage): ResponseMessage => {
         type: "response",
         requestId: request.requestId,
         data: {
-          availableActions: reduxRuntimeController.getAvailableActions(),
-          dispatchedActions:
-            request.includeHistory === false ? [] : reduxRuntimeController.getDispatchedActions(),
+          availableActions: runtimeController.getAvailableActions(),
+          dispatchedActions: request.includeHistory === false ? [] : runtimeController.getDispatchedActions(),
         },
       };
     case "dispatch_action":
@@ -108,7 +109,7 @@ const handleRequestMessage = (request: RequestMessage): ResponseMessage => {
         type: "response",
         requestId: request.requestId,
         data: {
-          state: reduxRuntimeController.dispatchAction(request.payload),
+          state: runtimeController.dispatchAction(request.payload),
         },
       };
     case "reset_state":
@@ -116,7 +117,7 @@ const handleRequestMessage = (request: RequestMessage): ResponseMessage => {
         type: "response",
         requestId: request.requestId,
         data: {
-          state: reduxRuntimeController.resetState(),
+          state: runtimeController.resetState(),
         },
       };
     default:
@@ -124,7 +125,7 @@ const handleRequestMessage = (request: RequestMessage): ResponseMessage => {
   }
 };
 
-export const startReduxRuntimeServers = (options: RuntimeStartOptions): ReduxRuntimeHandle => {
+export const startReduxRuntimeServers = (options: RuntimeStartOptions = {}): ReduxRuntimeHandle => {
   if (runtimeHandle) {
     return runtimeHandle;
   }
@@ -150,11 +151,12 @@ export const startReduxRuntimeServers = (options: RuntimeStartOptions): ReduxRun
     websocket: {
       open: (socket: Bun.ServerWebSocket<unknown>): void => {
         websocketClients?.add(socket);
+        const runtimeController = getRuntimeController();
         socket.send(
           JSON.stringify({
             type: "state_changed",
-            state: reduxRuntimeController.getState(),
-            dispatchedActions: reduxRuntimeController.getDispatchedActions(),
+            state: runtimeController.getState(),
+            dispatchedActions: runtimeController.getDispatchedActions(),
           } satisfies StateChangedMessage),
         );
       },
@@ -201,4 +203,9 @@ export const startReduxRuntimeServers = (options: RuntimeStartOptions): ReduxRun
   };
 
   return runtimeHandle;
+};
+
+export const stopReduxRuntimeServers = (): void => {
+  runtimeHandle?.stop();
+  runtimeHandle = null;
 };
