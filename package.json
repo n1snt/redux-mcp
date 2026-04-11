@@ -1,7 +1,7 @@
 {
   "name": "redux-mcp",
   "version": "0.1.0",
-  "description": "Redux to MCP bridge with websocket runtime integration.",
+  "description": "redux-mcp lets AI tools (via MCP) and your app connect to Redux state in a simple way.",
   "module": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",

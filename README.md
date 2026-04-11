@@ -1,56 +1,108 @@
 # redux-mcp
 
-Redux MCP server with a React playground for querying Redux state, listing actions, and dispatching actions.
+`redux-mcp` lets AI tools (via MCP) and your app connect to Redux state in a simple way.
 
-## Requirements
+It gives you:
 
-- Bun 1.3+
+- MCP tools to read state, list actions, dispatch actions, and reset history
+- A WebSocket runtime for live state updates
+- A simple API to register your own Redux stores
+
+## What It Does
+
+After integration, LLMs or clients can:
+
+- read current Redux state
+- see available/observed actions
+- dispatch actions into your store
+- receive live updates over WebSocket
 
 ## Install
 
+Use in your app:
+
+`bun add redux-mcp`
+
+For local development of this repo:
+
 `bun install`
 
-## Run MCP Server
+## Integrate In Your App
 
-`bun run dev:mcp`
+### Quick start (auto-start runtime)
 
-When running, this process exposes the playground websocket endpoint:
+```ts
+import "redux-mcp";
+```
 
-- WebSocket: `ws://localhost:8788/redux-events`
+This auto-starts the runtime WebSocket server on:
 
-### Exposed MCP tools
+- `ws://localhost:8788/redux-events`
+
+### Register your Redux stores (recommended)
+
+```ts
+import { registerStoresForMCP } from "redux-mcp";
+
+registerStoresForMCP({
+  stores: [{ storeName: "app", store }],
+});
+```
+
+Notes:
+
+- `store` should provide `getState()` and `dispatch(...)`
+- multiple stores are supported
+- action types are learned from observed dispatched actions
+
+### Manual runtime control (optional)
+
+```ts
+import { startReduxRuntimeServers } from "redux-mcp";
+
+const runtime = startReduxRuntimeServers({
+  websocketPort: 8788,
+  websocketPathname: "/redux-events",
+});
+
+// runtime.stop();
+```
+
+## Install MCP In Cursor
+
+Add this to Cursor MCP config:
+
+```json
+{
+  "mcpServers": {
+    "redux-mcp": {
+      "command": "npx",
+      "args": ["-y", "redux-mcp"]
+    }
+  }
+}
+```
+
+If Cursor cannot find `npx` (`spawn npx ENOENT`), use the absolute `npx` path instead:
+
+```json
+{
+  "mcpServers": {
+    "redux-mcp": {
+      "command": "/absolute/path/to/npx",
+      "args": ["-y", "redux-mcp"]
+    }
+  }
+}
+```
+
+Then restart MCP servers in Cursor.
+
+Available tools:
 
 - `redux_get_state`
 - `redux_get_actions`
 - `redux_dispatch_action`
 - `redux_reset_state`
 
-## Run Playground
-
-`bun run dev:playground`
-
-This starts a React app (Vite) that consumes the MCP runtime through WebSocket only (no polling, no REST).
-
-## Library Integration (Auto-start)
-
-Importing this package auto-starts the runtime websocket server inside your Bun app process.
-
-- `import "redux-mcp";`
-- Optional manual control: `startReduxRuntimeServers(...)` from `redux-mcp`
-- Register your app stores and auto-boot runtime in one call: `registerStoresForMCP(...)` from `redux-mcp`
-
-Example registration shape:
-
-- `registerStoresForMCP({ stores: [{ storeName, store }], runtime? })`
-- Exposed action types are learned from observed dispatched actions.
-- If you provide multiple stores, state responses include all stores keyed by `storeName`.
-
-## MCP Setup in Cursor
-
-See `documentation/cursor-mcp-setup.md`.
-
-## Quality Gates
-
-- Strict TypeScript only.
-- Zod schemas for action payload validation.
-- 100% coverage thresholds enforced in tests.
+For detailed Cursor setup: `documentation/cursor-mcp-setup.md`.

@@ -8,31 +8,27 @@ Use the absolute project path on your machine:
 
 ## 2) Add server config in Cursor MCP settings
 
-Open Cursor MCP settings and add this server entry (recommended: absolute script path):
+Open Cursor MCP settings and add this server entry (recommended):
 
 ```json
 {
   "mcpServers": {
     "redux-mcp": {
-      "command": "/Users/nishant/.bun/bin/bun",
-      "args": ["run", "/Users/nishant/code/redux-mcp/src/mcp/index.ts"],
-      "cwd": "/Users/nishant/code/redux-mcp"
+      "command": "npx",
+      "args": ["-y", "redux-mcp"]
     }
   }
 }
 ```
 
-If your Bun binary is on PATH, you can use `"command": "bun"` instead.
-
-Alternative (script-based):
+Alternative using absolute `npx` path (use this if Cursor shows `spawn npx ENOENT`):
 
 ```json
 {
   "mcpServers": {
     "redux-mcp": {
-      "command": "/Users/nishant/.bun/bin/bun",
-      "args": ["run", "dev:mcp"],
-      "cwd": "/Users/nishant/code/redux-mcp"
+      "command": "/absolute/path/to/npx",
+      "args": ["-y", "redux-mcp"]
     }
   }
 }
@@ -61,4 +57,4 @@ The React playground consumes this single websocket for state queries, action di
 
 ## Troubleshooting
 
-- If you see `Module not found "src/mcp/index.ts"`, Cursor is launching from a different working directory. Use the absolute path config shown above.
+- If you see `spawn npx ENOENT`, Cursor cannot resolve `npx` from PATH. Use absolute `npx` path in config.
