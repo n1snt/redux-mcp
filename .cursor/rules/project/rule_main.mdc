@@ -1,0 +1,14 @@
+---
+description: Core non-negotiable engineering checks
+alwaysApply: true
+---
+
+# Main Rule
+
+- Always write and run relevant tests after every change; do not ship until tests pass.
+- Enforce strict typing everywhere: typed args, explicit function return types, and typed variable declarations.
+- Keep files small and focused; split files before they become too long.
+- Avoid duplication: do not repeat functions/logic; extract shared utilities.
+- Keep code clean and simple; prefer readable, minimal solutions.
+- Keep type definitions in a separate `types.ts` (or module-specific `*.types.ts`) file, not mixed with function implementation files.
+- Add dependencies only via package manager commands (bun add, bun add -d, etc.); never manually edit package.json to add packages.
