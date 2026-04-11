@@ -21,15 +21,9 @@ export interface StoreLike {
   dispatch: (action: unknown) => unknown;
 }
 
-export interface StoreActionCreators {
-  [actionName: string]: (payload?: unknown) => unknown;
-}
-
 export interface StoreRegistration {
   storeName: string;
   store: StoreLike;
-  actions?: StoreActionCreators;
-  reset?: () => void;
 }
 
 export interface RegisterStoresForMCPOptions {

@@ -1,6 +1,6 @@
 import { UnsupportedActionError } from "../redux/controller";
 import type { ActionDefinition, ActionHistoryEntry, DispatchRequest } from "../redux/types";
-import type { StoreActionCreators, StoreRegistration, StoreRuntimeController } from "./types";
+import type { StoreRegistration, StoreRuntimeController } from "./types";
 
 interface ResolvedAction {
   storeName: string;
@@ -23,13 +23,6 @@ export class RegisteredStoresController implements StoreRuntimeController {
 
     stores.forEach((store: StoreRegistration): void => {
       this.storesByName.set(store.storeName, store);
-      Object.keys(store.actions ?? {}).forEach((actionName: string): void => {
-        this.actionDefinitions.push({
-          type: `${store.storeName}/${actionName}`,
-          description: `Dispatch ${actionName} on ${store.storeName} store.`,
-          payloadSchema: "unknown",
-        });
-      });
     });
   }
 
@@ -55,10 +48,6 @@ export class RegisteredStoresController implements StoreRuntimeController {
 
   public resetState(): unknown {
     this.history = [];
-    this.orderedStoreNames.forEach((storeName: string): void => {
-      const store: StoreRegistration | undefined = this.storesByName.get(storeName);
-      store?.reset?.();
-    });
     return this.getState();
   }
 
@@ -70,23 +59,32 @@ export class RegisteredStoresController implements StoreRuntimeController {
       throw new UnsupportedActionError(request.type);
     }
 
-    const actionCreators: StoreActionCreators = storeRegistration.actions ?? {};
-    const actionCreator = actionCreators[resolvedAction.actionName];
-    if (actionCreator) {
-      const action = actionCreator(request.payload);
-      storeRegistration.store.dispatch(action);
-    } else {
-      storeRegistration.store.dispatch({
-        type: resolvedAction.actionName,
-        payload: request.payload,
-      });
-    }
+    storeRegistration.store.dispatch({
+      type: resolvedAction.actionName,
+      payload: request.payload,
+    });
 
     this.history.push({
       type: request.type,
       payload: request.payload,
     });
+    this.recordActionDefinition(request.type, resolvedAction.storeName);
     return this.getState();
+  }
+
+  private recordActionDefinition(actionType: string, storeName: string): void {
+    const alreadyKnown: boolean = this.actionDefinitions.some(
+      (definition: ActionDefinition): boolean => definition.type === actionType,
+    );
+    if (alreadyKnown) {
+      return;
+    }
+
+    this.actionDefinitions.push({
+      type: actionType,
+      description: `Observed action for ${storeName} store.`,
+      payloadSchema: "unknown",
+    });
   }
 
   private resolveAction(request: DispatchRequest): ResolvedAction {

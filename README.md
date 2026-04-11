@@ -41,8 +41,8 @@ Importing this package auto-starts the runtime websocket server inside your Bun 
 
 Example registration shape:
 
-- `registerStoresForMCP({ stores: [{ storeName, store, actions?, reset? }], runtime? })`
-- If you provide `actions`, exposed action types become `<storeName>/<actionName>`.
+- `registerStoresForMCP({ stores: [{ storeName, store }], runtime? })`
+- Exposed action types are learned from observed dispatched actions.
 - If you provide multiple stores, state responses include all stores keyed by `storeName`.
 
 ## MCP Setup in Cursor

@@ -33,9 +33,6 @@ const createCounterStore = () => {
         }
       },
     },
-    reset: (): void => {
-      state = { value: 0 };
-    },
   };
 };
 
@@ -54,10 +51,6 @@ describe("registerStoresForMCP and registered store runtime", () => {
         {
           storeName: "app",
           store: counter.store,
-          actions: {
-            set: (payload?: unknown): StoreAction => ({ type: "set", payload }),
-          },
-          reset: counter.reset,
         },
       ],
       runtime: {
@@ -119,22 +112,14 @@ describe("registerStoresForMCP and registered store runtime", () => {
       {
         storeName: "first",
         store: firstStore.store,
-        actions: {
-          set: (payload?: unknown): StoreAction => ({ type: "set", payload }),
-        },
-        reset: firstStore.reset,
       },
       {
         storeName: "second",
         store: secondStore.store,
-        actions: {
-          increment: (payload?: unknown): StoreAction => ({ type: "increment", payload }),
-        },
-        reset: secondStore.reset,
       },
     ]);
 
-    expect(controller.getAvailableActions()).toHaveLength(2);
+    expect(controller.getAvailableActions()).toHaveLength(0);
     controller.dispatchAction({ type: "set", payload: 5, storeName: "first" });
     controller.dispatchAction({ type: "second/increment", payload: 7 });
     controller.dispatchAction({ type: "set", payload: 9, storeName: "first" });
@@ -149,8 +134,8 @@ describe("registerStoresForMCP and registered store runtime", () => {
     controller.resetState();
     expect(controller.getDispatchedActions()).toEqual([]);
     expect(controller.getState()).toEqual({
-      first: { value: 0 },
-      second: { value: 0 },
+      first: { value: 11 },
+      second: { value: 7 },
     });
   });
 
