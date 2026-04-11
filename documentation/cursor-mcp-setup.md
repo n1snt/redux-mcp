@@ -55,10 +55,9 @@ You should see:
 
 When Cursor runs this MCP server, it also exposes:
 
-- HTTP API: `http://localhost:8787`
 - WebSocket stream: `ws://localhost:8788/redux-events`
 
-The React playground consumes these for shared-state updates without polling.
+The React playground consumes this single websocket for state queries, action dispatches, and live updates.
 
 ## Troubleshooting
 

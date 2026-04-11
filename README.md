@@ -14,10 +14,9 @@ Redux MCP server with a React playground for querying Redux state, listing actio
 
 `bun run dev:mcp`
 
-When running, this process now also exposes playground integration endpoints:
+When running, this process exposes the playground websocket endpoint:
 
-- HTTP API: `http://localhost:8787`
-- WebSocket live updates: `ws://localhost:8788/redux-events`
+- WebSocket: `ws://localhost:8788/redux-events`
 
 ### Exposed MCP tools
 
@@ -30,11 +29,11 @@ When running, this process now also exposes playground integration endpoints:
 
 `bun run dev:playground`
 
-This starts a React app (Vite) that consumes the MCP runtime through HTTP + WebSocket (no polling).
+This starts a React app (Vite) that consumes the MCP runtime through WebSocket only (no polling, no REST).
 
 ## Library Integration (Auto-start)
 
-Importing this package auto-starts the runtime servers (HTTP + WebSocket) inside your Bun app process.
+Importing this package auto-starts the runtime websocket server inside your Bun app process.
 
 - `import "redux-mcp";`
 - Optional manual control: `startReduxRuntimeServers(...)` from `redux-mcp`

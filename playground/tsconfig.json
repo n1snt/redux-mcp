@@ -19,5 +19,5 @@
     "noPropertyAccessFromIndexSignature": true,
     "types": ["bun"]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "../src/redux/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "../src/redux/**/*.ts", "../src/integration/**/*.ts"]
 }
