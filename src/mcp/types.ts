@@ -13,6 +13,27 @@ export interface GetStateResponse extends Record<string, unknown> {
   state: unknown;
 }
 
+export interface GetStateDiffRequest extends Record<string, unknown> {
+  previousState?: unknown;
+}
+
+export type StateDiffChangeType = "added" | "removed" | "changed";
+
+export interface StateDiffChange extends Record<string, unknown> {
+  path: string;
+  changeType: StateDiffChangeType;
+  previousValue?: unknown;
+  currentValue?: unknown;
+}
+
+export interface GetStateDiffResponse extends Record<string, unknown> {
+  previousState: unknown | null;
+  currentState: unknown;
+  hasChanges: boolean;
+  changeCount: number;
+  changes: StateDiffChange[];
+}
+
 export interface DispatchActionResponse extends Record<string, unknown> {
   state: unknown;
   dispatchedAction: DispatchRequest;

@@ -43,6 +43,7 @@ After saving config, restart MCP servers from Cursor so the new server is discov
 You should see:
 
 - `redux_get_state`
+- `redux_get_state_diff`
 - `redux_get_actions`
 - `redux_dispatch_action`
 - `redux_reset_state`

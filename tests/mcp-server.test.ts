@@ -15,17 +15,24 @@ describe("createMcpServer", () => {
     const getActionsResult = await tools["redux_get_actions"]?.handler({
       includeHistory: false,
     });
+    const firstDiffResult = await tools["redux_get_state_diff"]?.handler({});
     const dispatchResult = await tools["redux_dispatch_action"]?.handler({
       type: "counter/set",
       payload: { value: 4 },
     });
+    const secondDiffResult = await tools["redux_get_state_diff"]?.handler({});
     const resetResult = await tools["redux_reset_state"]?.handler({});
 
     expect(server).toBeDefined();
     expect(server.isConnected()).toBe(false);
     expect(getStateResult).toBeDefined();
     expect(getActionsResult).toBeDefined();
+    expect(firstDiffResult).toBeDefined();
     expect(dispatchResult).toBeDefined();
+    expect(secondDiffResult).toBeDefined();
     expect(resetResult).toBeDefined();
+    expect(
+      (secondDiffResult as { structuredContent: { changes: Array<{ path: string }> } }).structuredContent.changes[0]?.path,
+    ).toBe("counter.value");
   });
 });
