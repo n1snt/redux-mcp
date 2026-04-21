@@ -1,30 +1,111 @@
 import { afterEach, describe, expect, it } from "vitest";
+import WebSocket, { type RawData } from "ws";
 
 import { resetRuntimeController } from "../src/integration/registry";
 import { reduxRuntimeController } from "../src/redux/runtime";
 import { startReduxRuntimeServers } from "../src/integration/runtime";
 import type { RequestMessage, ReduxRuntimeHandle, StateChangedMessage } from "../src/integration/types";
 
-const hasBunRuntime: boolean = "Bun" in globalThis;
-const describeIfBun = hasBunRuntime ? describe : describe.skip;
-
 const waitForWebSocketOpen = (socket: WebSocket): Promise<void> =>
   new Promise((resolve: () => void, reject: (reason?: unknown) => void) => {
-    socket.onopen = (): void => resolve();
-    socket.onerror = (): void => reject(new Error("WebSocket failed to open."));
+    socket.once("open", (): void => resolve());
+    socket.once("error", (): void => reject(new Error("WebSocket failed to open.")));
   });
+
+const websocketEventDataToText = (data: RawData): string => {
+  if (typeof data === "string") {
+    return data;
+  }
+
+  if (data instanceof ArrayBuffer) {
+    return new TextDecoder().decode(data);
+  }
+
+  if (Array.isArray(data)) {
+    return Buffer.concat(data).toString("utf-8");
+  }
+
+  return data.toString("utf-8");
+};
+
+interface SocketWaiter {
+  resolve: (value: unknown) => void;
+  reject: (reason?: unknown) => void;
+}
+
+interface SocketMessageQueue {
+  messages: unknown[];
+  waiters: SocketWaiter[];
+  lastError: unknown | null;
+}
+
+const socketMessageQueues: WeakMap<WebSocket, SocketMessageQueue> = new WeakMap();
+
+const getSocketMessageQueue = (socket: WebSocket): SocketMessageQueue => {
+  const existingQueue: SocketMessageQueue | undefined = socketMessageQueues.get(socket);
+  if (existingQueue) {
+    return existingQueue;
+  }
+
+  const createdQueue: SocketMessageQueue = {
+    messages: [],
+    waiters: [],
+    lastError: null,
+  };
+
+  socket.on("message", (rawData: RawData): void => {
+    let parsedMessage: unknown;
+    try {
+      parsedMessage = JSON.parse(websocketEventDataToText(rawData)) as unknown;
+    } catch (error: unknown) {
+      createdQueue.lastError = error;
+      while (createdQueue.waiters.length > 0) {
+        const waiter = createdQueue.waiters.shift();
+        waiter?.reject(error);
+      }
+      return;
+    }
+
+    const waiter: SocketWaiter | undefined = createdQueue.waiters.shift();
+    if (waiter) {
+      waiter.resolve(parsedMessage);
+      return;
+    }
+    createdQueue.messages.push(parsedMessage);
+  });
+
+  socket.on("error", (error: unknown): void => {
+    createdQueue.lastError = error;
+    while (createdQueue.waiters.length > 0) {
+      const waiter = createdQueue.waiters.shift();
+      waiter?.reject(error);
+    }
+  });
+
+  socketMessageQueues.set(socket, createdQueue);
+  return createdQueue;
+};
 
 const waitForWebSocketMessage = (socket: WebSocket): Promise<unknown> =>
   new Promise((resolve: (value: unknown) => void, reject: (reason?: unknown) => void) => {
-    socket.onmessage = (event: MessageEvent<string>): void => {
-      resolve(JSON.parse(event.data) as unknown);
-    };
-    socket.onerror = (): void => reject(new Error("WebSocket message failed."));
+    const queue: SocketMessageQueue = getSocketMessageQueue(socket);
+    if (queue.lastError) {
+      reject(queue.lastError);
+      return;
+    }
+
+    const queuedMessage: unknown | undefined = queue.messages.shift();
+    if (queuedMessage !== undefined) {
+      resolve(queuedMessage);
+      return;
+    }
+
+    queue.waiters.push({ resolve, reject });
   });
 
 const waitForWebSocketClose = (socket: WebSocket): Promise<void> =>
   new Promise((resolve: () => void) => {
-    socket.onclose = (): void => resolve();
+    socket.once("close", (): void => resolve());
   });
 
 const waitForMatchingMessage = async <TMessage>(
@@ -39,7 +120,7 @@ const waitForMatchingMessage = async <TMessage>(
   }
 };
 
-describeIfBun("startReduxRuntimeServers", () => {
+describe("startReduxRuntimeServers", () => {
   let handle: ReduxRuntimeHandle | null = null;
 
   afterEach(() => {
@@ -59,12 +140,10 @@ describeIfBun("startReduxRuntimeServers", () => {
     const secondHandle = startReduxRuntimeServers();
     expect(secondHandle).toBe(handle);
 
-    const notFoundResponse = await fetch("http://localhost:9892/wrong-path");
-    expect(notFoundResponse.status).toBe(404);
-
     const socket = new WebSocket("ws://localhost:9892/redux-events");
+    const initialMessagePromise: Promise<unknown> = waitForWebSocketMessage(socket);
     await waitForWebSocketOpen(socket);
-    const initialMessage = (await waitForWebSocketMessage(socket)) as StateChangedMessage;
+    const initialMessage = (await initialMessagePromise) as StateChangedMessage;
     expect(initialMessage.type).toBe("state_changed");
 
     socket.send("noop");
@@ -269,8 +348,9 @@ describeIfBun("startReduxRuntimeServers", () => {
     });
 
     const socket = new WebSocket("ws://localhost:9897/redux-events");
+    const initialMessagePromise: Promise<unknown> = waitForWebSocketMessage(socket);
     await waitForWebSocketOpen(socket);
-    await waitForWebSocketMessage(socket);
+    await initialMessagePromise;
 
     const resetRequest: RequestMessage = {
       type: "request",

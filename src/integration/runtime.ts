@@ -7,6 +7,7 @@ import type {
   RuntimeStartOptions,
   StateChangedMessage,
 } from "./types";
+import { WebSocketServer, type RawData, type WebSocket } from "ws";
 import { getRuntimeController } from "./registry";
 import type { RuntimeController } from "../redux/runtime-controller.types";
 
@@ -19,7 +20,8 @@ const defaultRuntimeStartOptions: Required<RuntimeStartOptions> = {
 
 let runtimeHandle: ReduxRuntimeHandle | null = null;
 let wrappedController: RuntimeController | null = null;
-let websocketClients: Set<Bun.ServerWebSocket<unknown>> | null = null;
+let websocketServer: WebSocketServer | null = null;
+let websocketClients: Set<WebSocket> | null = null;
 
 const broadcastState = (): void => {
   if (!websocketClients) {
@@ -33,7 +35,7 @@ const broadcastState = (): void => {
   };
 
   const serializedPayload: string = JSON.stringify(payload);
-  websocketClients.forEach((socket: Bun.ServerWebSocket<unknown>): void => {
+  websocketClients.forEach((socket: WebSocket): void => {
     socket.send(serializedPayload);
   });
 };
@@ -67,6 +69,22 @@ const toErrorPayload = (error: unknown, requestId?: string): ErrorMessage => ({
   requestId,
   error: `${error}`,
 });
+
+const rawDataToText = (rawData: RawData): string => {
+  if (typeof rawData === "string") {
+    return rawData;
+  }
+
+  if (rawData instanceof ArrayBuffer) {
+    return new TextDecoder().decode(rawData);
+  }
+
+  if (Array.isArray(rawData)) {
+    return Buffer.concat(rawData).toString("utf-8");
+  }
+
+  return rawData.toString("utf-8");
+};
 
 const isRequestMessage = (value: unknown): value is RequestMessage => {
   if (!value || typeof value !== "object") {
@@ -136,67 +154,63 @@ export const startReduxRuntimeServers = (options: RuntimeStartOptions = {}): Red
   };
   const { websocketPort, websocketPathname } = resolvedOptions;
 
-  websocketClients = new Set<Bun.ServerWebSocket<unknown>>();
+  websocketClients = new Set<WebSocket>();
   wrapControllerForRealtimeBroadcast();
 
-  const websocketServer: Bun.Server<unknown> = Bun.serve({
+  websocketServer = new WebSocketServer({
     port: websocketPort,
-    fetch: (request: Request, server: Bun.Server<unknown>): Response | undefined => {
-      const url: URL = new URL(request.url);
-      if (url.pathname === websocketPathname && server.upgrade(request, { data: undefined })) {
-        return undefined;
+    path: websocketPathname,
+  });
+
+  websocketServer.on("connection", (socket: WebSocket): void => {
+    websocketClients?.add(socket);
+    const runtimeController = getRuntimeController();
+    socket.send(
+      JSON.stringify({
+        type: "state_changed",
+        state: runtimeController.getState(),
+        dispatchedActions: runtimeController.getDispatchedActions(),
+      } satisfies StateChangedMessage),
+    );
+
+    socket.on("close", (): void => {
+      websocketClients?.delete(socket);
+    });
+
+    socket.on("message", (rawMessage: RawData): void => {
+      const messageText: string = rawDataToText(rawMessage);
+
+      let parsedMessage: unknown;
+      try {
+        parsedMessage = JSON.parse(messageText);
+      } catch (error: unknown) {
+        socket.send(JSON.stringify(toErrorPayload(error)));
+        return;
       }
-      return new Response("Not found", { status: 404 });
-    },
-    websocket: {
-      open: (socket: Bun.ServerWebSocket<unknown>): void => {
-        websocketClients?.add(socket);
-        const runtimeController = getRuntimeController();
-        socket.send(
-          JSON.stringify({
-            type: "state_changed",
-            state: runtimeController.getState(),
-            dispatchedActions: runtimeController.getDispatchedActions(),
-          } satisfies StateChangedMessage),
-        );
-      },
-      close: (socket: Bun.ServerWebSocket<unknown>): void => {
-        websocketClients?.delete(socket);
-      },
-      message: (socket: Bun.ServerWebSocket<unknown>, rawMessage: string | ArrayBuffer | Uint8Array): void => {
-        const messageText: string =
-          typeof rawMessage === "string"
-            ? rawMessage
-            : new TextDecoder().decode(rawMessage as ArrayBufferLike);
 
-        let parsedMessage: unknown;
-        try {
-          parsedMessage = JSON.parse(messageText);
-        } catch (error: unknown) {
-          socket.send(JSON.stringify(toErrorPayload(error)));
-          return;
-        }
+      if (!isRequestMessage(parsedMessage)) {
+        socket.send(JSON.stringify(toErrorPayload(new Error("Invalid request message."))));
+        return;
+      }
 
-        if (!isRequestMessage(parsedMessage)) {
-          socket.send(JSON.stringify(toErrorPayload(new Error("Invalid request message."))));
-          return;
-        }
-
-        try {
-          const response: ResponseMessage = handleRequestMessage(parsedMessage);
-          socket.send(JSON.stringify(response satisfies PlaygroundServerMessage));
-        } catch (error: unknown) {
-          socket.send(JSON.stringify(toErrorPayload(error, parsedMessage.requestId)));
-        }
-      },
-    },
+      try {
+        const response: ResponseMessage = handleRequestMessage(parsedMessage);
+        socket.send(JSON.stringify(response satisfies PlaygroundServerMessage));
+      } catch (error: unknown) {
+        socket.send(JSON.stringify(toErrorPayload(error, parsedMessage.requestId)));
+      }
+    });
   });
 
   runtimeHandle = {
     websocketPort,
     websocketPathname,
     stop: (): void => {
-      websocketServer.stop(true);
+      if (websocketServer) {
+        websocketServer.clients.forEach((socket: WebSocket): void => socket.close());
+        websocketServer.close();
+      }
+      websocketServer = null;
       websocketClients = null;
       runtimeHandle = null;
     },

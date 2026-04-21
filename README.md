@@ -21,11 +21,11 @@ After integration, LLMs or clients can:
 
 Use in your app:
 
-`bun add redux-mcp`
+`npm install redux-mcp`
 
 For local development of this repo:
 
-`bun install`
+`npm install`
 
 ## Integrate In Your App
 

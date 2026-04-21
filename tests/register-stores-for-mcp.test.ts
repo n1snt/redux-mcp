@@ -1,13 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
+import WebSocket, { type RawData } from "ws";
 
 import { getRuntimeController, resetRuntimeController } from "../src/integration/registry";
 import { registerStoresForMCP } from "../src/integration/register";
 import { startReduxRuntimeServers, stopReduxRuntimeServers } from "../src/integration/runtime";
 import { RegisteredStoresController } from "../src/integration/stores-controller";
 import { reduxRuntimeController } from "../src/redux/runtime";
-
-const hasBunRuntime: boolean = "Bun" in globalThis;
-const describeIfBun = hasBunRuntime ? describe : describe.skip;
 
 interface CounterState {
   value: number;
@@ -17,6 +15,22 @@ interface StoreAction {
   type: string;
   payload?: unknown;
 }
+
+const websocketEventDataToText = (data: RawData): string => {
+  if (typeof data === "string") {
+    return data;
+  }
+
+  if (data instanceof ArrayBuffer) {
+    return new TextDecoder().decode(data);
+  }
+
+  if (Array.isArray(data)) {
+    return Buffer.concat(data).toString("utf-8");
+  }
+
+  return data.toString("utf-8");
+};
 
 const createCounterStore = () => {
   let state: CounterState = {
@@ -39,7 +53,7 @@ const createCounterStore = () => {
   };
 };
 
-describeIfBun("registerStoresForMCP and registered store runtime", () => {
+describe("registerStoresForMCP and registered store runtime", () => {
   afterEach(() => {
     stopReduxRuntimeServers();
     resetRuntimeController();
@@ -66,17 +80,26 @@ describeIfBun("registerStoresForMCP and registered store runtime", () => {
 
     const socket = new WebSocket("ws://localhost:9901/redux-events");
     await new Promise<void>((resolve, reject) => {
-      socket.onopen = (): void => resolve();
-      socket.onerror = (): void => reject(new Error("WebSocket failed to open."));
+      socket.once("open", (): void => resolve());
+      socket.once("error", (): void => reject(new Error("WebSocket failed to open.")));
     });
 
-    const responsePromise = new Promise<{ requestId: string; data: { state: CounterState } }>((resolve) => {
-      socket.onmessage = (event: MessageEvent<string>): void => {
-        const parsed = JSON.parse(event.data) as { type: string; requestId?: string; data?: { state: CounterState } };
-        if (parsed.type === "response" && parsed.requestId === "req-1") {
-          resolve(parsed as { requestId: string; data: { state: CounterState } });
+    const responsePromise = new Promise<{ requestId: string; data: { state: CounterState } }>((resolve, reject) => {
+      socket.on("message", (rawData: RawData): void => {
+        try {
+          const payloadText: string = websocketEventDataToText(rawData);
+          const parsed = JSON.parse(payloadText) as {
+            type: string;
+            requestId?: string;
+            data?: { state: CounterState };
+          };
+          if (parsed.type === "response" && parsed.requestId === "req-1") {
+            resolve(parsed as { requestId: string; data: { state: CounterState } });
+          }
+        } catch (error: unknown) {
+          reject(error);
         }
-      };
+      });
     });
 
     socket.send(
