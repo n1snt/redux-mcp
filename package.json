@@ -1,6 +1,6 @@
 {
   "name": "redux-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "redux-mcp lets AI tools (via MCP) and your app connect to Redux state in a simple way.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
